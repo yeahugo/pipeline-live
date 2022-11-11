@@ -18,7 +18,7 @@ from zipline.utils.numpy_utils import (
     repeat_first_axis,
 )
 from zipline.utils.pandas_utils import explode
-
+import datetime
 
 class LivePipelineEngine(object):
 
@@ -40,6 +40,7 @@ class LivePipelineEngine(object):
 
     def run_pipeline(self, pipeline):
         now = pd.Timestamp.now(tz=self._calendar.tz)
+        now = now + datetime.timedelta(days=1)   # fix the bug that close price not the last price
         today = pd.Timestamp(
             year=now.year, month=now.month, day=now.day,
             tz='utc')

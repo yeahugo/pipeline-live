@@ -5,6 +5,12 @@ from .util import (
     daily_cache, parallelize
 )
 
+import redis
+import pandas as pd
+
+pool = redis.ConnectionPool(host="127.0.0.1",max_connections=50,port=6379,password='muyang1017')
+redis_con = redis.StrictRedis(connection_pool=pool)
+
 
 def list_symbols():
     api = REST()
@@ -37,14 +43,23 @@ def _get_stockprices(symbols, limit=365, timespan='day'):
 
     def fetch(symbols):
         data = {}
+        date_str = str(api.get_clock().timestamp.date())
+        redis_key = 'bars-'+date_str
         for symbol in symbols:
-            df = api.get_bars(
-                symbol,
-                start=start,
-                limit=limit,
-                timeframe=timeframe,
-                adjustment='raw'
-            ).df
+            df = pd.DataFrame()
+            if redis_con.hexists(redis_key,symbol):
+                df = pd.read_msgpack(redis_con.hget(redis_key,symbol))
+            elif not redis_con.sismember("empty_symbols",symbol):
+                if 'USDT' in  symbol or '/USD' in symbol or '/BTC' in symbol:
+                    continue
+                df = api.get_bars(symbol,start=start,limit=limit,timeframe=timeframe,adjustment='raw').df
+                if not df.empty:
+                    df_msg = df.to_msgpack()
+                    result = redis_con.hset(redis_key,symbol,df_msg)
+                else:
+                    redis_con.sadd("empty_symbols",symbol)
+                    print("empty symbol: "+symbol)
+                    print(df)
 
             # Update the index format for comparison with the trading calendar
             if not df.empty:
