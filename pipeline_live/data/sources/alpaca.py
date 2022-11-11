@@ -52,7 +52,7 @@ def _get_stockprices(symbols, limit=365, timespan='day'):
             elif not redis_con.sismember("empty_symbols",symbol):
                 if 'USDT' in  symbol or '/USD' in symbol or '/BTC' in symbol:
                     continue
-                df = api.get_bars(symbol,start=start,limit=limit,timeframe=timeframe,adjustment='raw').df
+                df = api.get_bars(symbol,start=start,limit=limit,timeframe=timeframe,adjustment='split').df
                 if not df.empty:
                     df_msg = df.to_msgpack()
                     result = redis_con.hset(redis_key,symbol,df_msg)
